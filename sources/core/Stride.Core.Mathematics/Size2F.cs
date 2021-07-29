@@ -56,6 +56,13 @@ namespace Stride.Core.Mathematics
         }
 
         /// <summary>
+        /// Performs an implicit conversion from the <see cref="Vector2"/> structure.
+        /// </summary>
+        /// <param name="value">The source <see cref="Vector2"/> value.</param>
+        /// <returns>The converted structure.</returns>
+        public static implicit operator Size2F(Vector2 value) => new(value.X, value.Y);
+
+        /// <summary>
         /// Width.
         /// </summary>
         [DataMember(0)]

@@ -117,6 +117,13 @@ namespace Stride.Core.Mathematics
         }
 
         /// <summary>
+        /// Performs an implicit conversion from the <see cref="Size2F"/> structure.
+        /// </summary>
+        /// <param name="value">The source <see cref="Size2F"/> value.</param>
+        /// <returns>The converted structure.</returns>
+        public static implicit operator Vector2(Size2F value) => new(value.Width, value.Height);
+
+        /// <summary>
         /// Gets a value indicting whether this instance is normalized.
         /// </summary>
         public bool IsNormalized
