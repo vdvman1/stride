@@ -61,6 +61,36 @@ namespace Stride.Core.Mathematics
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="RectangleF"/> struct.
+        /// </summary>
+        /// <param name="cornerA">The position of the first corner of the rectangle</param>
+        /// <param name="cornerB">The position of the corner of the rectangle that is opposite <paramref name="cornerA"/></param>
+        public RectangleF(Vector2 cornerA, Vector2 cornerB)
+        {
+            if (cornerA.X < cornerB.X)
+            {
+                X = cornerA.X;
+                Width = cornerB.X - X;
+            }
+            else
+            {
+                X = cornerB.X;
+                Width = cornerA.X - X;
+            }
+
+            if (cornerA.Y < cornerB.Y)
+            {
+                Y = cornerA.Y;
+                Height = cornerB.Y - Y;
+            }
+            else
+            {
+                Y = cornerB.Y;
+                Height = cornerA.Y - Y;
+            }
+        }
+
+        /// <summary>
         /// Gets or sets the X position of the left edge.
         /// </summary>
         /// <value>The left.</value>
