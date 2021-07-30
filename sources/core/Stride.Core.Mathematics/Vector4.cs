@@ -247,8 +247,9 @@ namespace Stride.Core.Mathematics
         /// <summary>
         /// Converts the vector into a unit vector.
         /// </summary>
+        /// <returns>The previous length of the vector</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Normalize()
+        public float Normalize()
         {
             float length = Length();
             if (length > MathUtil.ZeroTolerance)
@@ -259,6 +260,7 @@ namespace Stride.Core.Mathematics
                 Z *= inverse;
                 W *= inverse;
             }
+            return length;
         }
 
         /// <summary>
@@ -639,12 +641,13 @@ namespace Stride.Core.Mathematics
         /// </summary>
         /// <param name="value">The vector to normalize.</param>
         /// <param name="result">When the method completes, contains the normalized vector.</param>
+        /// <returns>The length of <paramref name="value"/></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Normalize(ref Vector4 value, out Vector4 result)
+        public static float Normalize(ref Vector4 value, out Vector4 result)
         {
             Vector4 temp = value;
             result = temp;
-            result.Normalize();
+            return result.Normalize();
         }
 
         /// <summary>
