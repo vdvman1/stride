@@ -55,7 +55,7 @@ namespace Stride.Engine.Network
             DisposeSocket();
         }
 
-        public async Task StartServer(int port, bool singleConnection, int retryCount = 1)
+        public async Task StartServer(int port, bool singleConnection, int retryCount = 1, bool needAck = true)
         {
             // Create TCP listener
             var listener = new TcpSocketListener(2048);
@@ -74,7 +74,8 @@ namespace Stride.Engine.Network
 
                     // Do an ack with magic packet (necessary so that we know it's not a dead connection,
                     // it sometimes happen when doing port forwarding because service don't refuse connection right away but only fails when sending data)
-                    await SendAndReceiveAck(clientSocketContext.socket, MagicAck, MagicAck).ConfigureAwait(false);
+                    if (needAck)
+                        await SendAndReceiveAck(clientSocketContext.socket, MagicAck, MagicAck).ConfigureAwait(false);
 
                     Connected?.Invoke(clientSocketContext);
 
