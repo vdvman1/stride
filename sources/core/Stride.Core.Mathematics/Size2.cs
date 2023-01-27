@@ -127,5 +127,17 @@ namespace Stride.Core.Mathematics
         {
             return string.Format("({0},{1})", Width, Height);
         }
+
+        /// <summary>
+        /// Performs an implicit conversion from <see cref="Size2"/> to <see cref="Size2F"/>.
+        /// </summary>
+        /// <returns>The result of the conversion.</returns>
+        public static implicit operator Size2F(Size2 size) => new(size.Width, size.Height);
+
+        /// <summary>
+        /// Performs an implicit conversion from <see cref="Size2"/> to <see cref="Vector2"/>.
+        /// </summary>
+        /// <returns>The result of the conversion.</returns>
+        public static implicit operator Vector2(Size2 size) => new(size.Width, size.Height);
     }
 }
