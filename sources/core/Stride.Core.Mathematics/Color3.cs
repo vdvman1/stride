@@ -196,9 +196,9 @@ namespace Stride.Core.Mathematics
         /// <param name="exponent">The exponent.</param>
         public void Pow(float exponent)
         {
-            R = (float)Math.Pow(R, exponent);
-            G = (float)Math.Pow(G, exponent);
-            B = (float)Math.Pow(B, exponent);
+            R = MathF.Pow(R, exponent);
+            G = MathF.Pow(G, exponent);
+            B = MathF.Pow(B, exponent);
         }
 
         /// <summary>
@@ -816,6 +816,19 @@ namespace Stride.Core.Mathematics
                 return false;
 
             return Equals((Color3)value);
+        }
+                
+        /// <summary>
+        /// Deconstructs the vector's components into named variables.
+        /// </summary>
+        /// <param name="r">The R component</param>
+        /// <param name="g">The G component</param>
+        /// <param name="b">The B component</param>
+        public void Deconstruct(out float r, out float g, out float b)
+        {
+            r = R;
+            g = G;
+            b = B;
         }
 
 #if SlimDX1xInterop

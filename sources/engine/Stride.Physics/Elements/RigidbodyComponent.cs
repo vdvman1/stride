@@ -40,7 +40,6 @@ namespace Stride.Physics
         public RigidbodyComponent()
         {
             LinkedConstraints = new List<Constraint>();
-            ProcessCollisions = true;
         }
 
         /// <summary>
@@ -303,7 +302,7 @@ namespace Stride.Physics
 
             SetupBoneLink();
 
-            var rbci = new BulletSharp.RigidBodyConstructionInfo(0.0f, MotionState, ColliderShape.InternalShape, Vector3.Zero);
+            using var rbci = new BulletSharp.RigidBodyConstructionInfo(0.0f, MotionState, ColliderShape.InternalShape, Vector3.Zero);
             InternalRigidBody = new BulletSharp.RigidBody(rbci)
             {
                 UserObject = this,
@@ -406,14 +405,7 @@ namespace Stride.Physics
             Data.PhysicsComponent.Simulation.SimulationProfiler.Mark();
             Data.PhysicsComponent.Simulation.UpdatedRigidbodies++;
 
-            if (BoneIndex == -1)
-            {
-                DerivePhysicsTransformation(out physicsTransform);
-            }
-            else
-            {
-                DeriveBonePhysicsTransformation(out physicsTransform);
-            }
+            DerivePhysicsTransformation(out physicsTransform, false);
         }
 
         /// <summary>

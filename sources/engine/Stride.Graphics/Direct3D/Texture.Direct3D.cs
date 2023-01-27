@@ -22,6 +22,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
+using System.Runtime.CompilerServices;
 using SharpDX.Direct3D;
 using SharpDX.Direct3D11;
 using Stride.Core;
@@ -95,7 +96,7 @@ namespace Stride.Graphics
             var newTextureDescription = ConvertFromNativeDescription(texture.Description);
 
             // We might have created the swapchain as a non-srgb format (esp on Win10&RT) but we want it to behave like it is (esp. for the view and render target)
-            if (isSrgb)
+            if(isSrgb)
                 newTextureDescription.Format = newTextureDescription.Format.ToSRgb();
 
             return InitializeFrom(newTextureDescription);
@@ -553,10 +554,9 @@ namespace Stride.Graphics
             if (dataBoxes == null || dataBoxes.Length == 0)
                 return null;
 
+            // TODO: PERF: return Unsafe.As<SharpDX.DataBox[]>(dataBoxes);
             var sharpDXDataBoxes = new SharpDX.DataBox[dataBoxes.Length];
-            fixed (void* pDataBoxes = sharpDXDataBoxes)
-                Utilities.Write((IntPtr)pDataBoxes, dataBoxes, 0, dataBoxes.Length);
-
+            Unsafe.As<SharpDX.DataBox[]>(dataBoxes).AsSpan().CopyTo(sharpDXDataBoxes.AsSpan());
             return sharpDXDataBoxes;
         }
 

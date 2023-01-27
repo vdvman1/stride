@@ -1,28 +1,25 @@
 // Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net) and Silicon Studio Corp. (https://www.siliconstudio.co.jp)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 
-//#define SIMULATE_OFFLINE
-
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Win32;
-
 using Stride.Core.Extensions;
-using Stride.LauncherApp.Resources;
-using Stride.LauncherApp.Services;
 using Stride.Core.Packages;
 using Stride.Core.Presentation.Collections;
 using Stride.Core.Presentation.Commands;
 using Stride.Core.Presentation.Services;
 using Stride.Core.Presentation.ViewModel;
-using Stride.Metrics;
 using Stride.Core.VisualStudio;
-using System.Diagnostics.CodeAnalysis;
+using Stride.LauncherApp.Resources;
+using Stride.LauncherApp.Services;
+using Stride.Metrics;
 
 namespace Stride.LauncherApp.ViewModels
 {
@@ -58,8 +55,8 @@ namespace Stride.LauncherApp.ViewModels
 
             DisplayReleaseAnnouncement();
 
-            VsixPackage = new VsixVersionViewModel(this, store, store.VsixPluginId);
-            VsixPackageXenko = new VsixVersionViewModel(this, store, store.VsixPluginId.Replace("Stride", "Xenko"));
+            VsixPackage2019 = new VsixVersionViewModel(this, store, store.VsixPackageId, NugetStore.VsixSupportedVsVersion.VS2019);
+            VsixPackage2022 = new VsixVersionViewModel(this, store, store.VsixPackageId, NugetStore.VsixSupportedVsVersion.VS2022);
             // Commands
             InstallLatestVersionCommand = new AnonymousTaskCommand(ServiceProvider, InstallLatestVersion) { IsEnabled = false };
             OpenUrlCommand = new AnonymousTaskCommand<string>(ServiceProvider, OpenUrl);
@@ -70,6 +67,21 @@ namespace Stride.LauncherApp.ViewModels
                 await FetchOnlineData();
             });
             StartStudioCommand = new AnonymousTaskCommand(ServiceProvider, StartStudio) { IsEnabled = false };
+            CheckDeprecatedSourcesCommand = new AnonymousTaskCommand(ServiceProvider, async () =>
+            {
+                var settings = NuGet.Configuration.Settings.LoadDefaultSettings(null);
+                if (!NugetStore.CheckPackageSource(settings, "Stride"))
+                {
+                    // Add Stride package store (still used for Xenko up to 3.0)
+                    if (await ServiceProvider.Get<IDialogService>().MessageBox(Strings.AskAddNugetDeprecatedSource, MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                    {
+                        NugetStore.UpdatePackageSource(settings, "Stride", "https://packages.stride3d.net/nuget");
+                        settings.SaveToDisk();
+
+                        SelfUpdater.RestartApplication();
+                    }
+                }
+            });
 
             foreach (var devVersion in LauncherSettings.DeveloperVersions)
             {
@@ -93,9 +105,9 @@ namespace Stride.LauncherApp.ViewModels
 
         public bool ShowBetaVersions { get { return showBetaVersions; } set { SetValue(ref showBetaVersions, value); } }
 
-        public VsixVersionViewModel VsixPackage { get; }
+        public VsixVersionViewModel VsixPackage2019 { get; }
 
-        public VsixVersionViewModel VsixPackageXenko { get; }
+        public VsixVersionViewModel VsixPackage2022 { get; }
 
         public StrideVersionViewModel ActiveVersion { get { return activeVersion; } set { SetValue(ref activeVersion, value); Dispatcher.InvokeAsync(() => StartStudioCommand.IsEnabled = (value != null) && value.CanStart); } }
 
@@ -143,6 +155,8 @@ namespace Stride.LauncherApp.ViewModels
 
         public CommandBase StartStudioCommand { get; }
 
+        public CommandBase CheckDeprecatedSourcesCommand { get; }
+
         private async Task FetchOnlineData()
         {
             // We ensure that the self-updater task starts once the app is running because it might invoke dialogs.
@@ -177,8 +191,8 @@ namespace Stride.LauncherApp.ViewModels
                 var newsTask = FetchNewsPages();
 
                 await RetrieveServerStrideVersions();
-                await VsixPackage.UpdateFromStore();
-                await VsixPackageXenko.UpdateFromStore();
+                await VsixPackage2019.UpdateFromStore();
+                await VsixPackage2022.UpdateFromStore();
                 await CheckForFirstInstall();
 
                 await newsTask;
@@ -389,11 +403,8 @@ namespace Stride.LauncherApp.ViewModels
         {
             try
             {
-#if SIMULATE_OFFLINE
-                var serverPackages = new List<IPackage>();
-#else
                 var serverPackages = await RunLockTask(() => store.FindSourcePackages(store.MainPackageIds, CancellationToken.None).Result.FilterStrideMainPackages().Where(p => !store.IsDevRedirectPackage(p)).OrderByDescending(p => p.Version).ToList());
-#endif
+
                 // Check if we could connect to the server
                 var wasOffline = IsOffline;
                 IsOffline = serverPackages.Count == 0;
@@ -470,8 +481,6 @@ namespace Stride.LauncherApp.ViewModels
         public async Task CheckForFirstInstall()
         {
             const string prerequisitesRunTaskName = "PrerequisitesRun";
-            //const string askedForJapaneseSurveyTaskName = "AskedForJapaneseSurvey";
-            //const string askedForSurveyTaskName = "AskedForSurvey";
 
             if (!HasDoneTask(prerequisitesRunTaskName))
             {
@@ -483,8 +492,6 @@ namespace Stride.LauncherApp.ViewModels
             }
 
             bool firstInstall = StrideVersions.All(x => !x.CanDelete) && StrideVersions.Any(x => x.CanBeDownloaded);
-            //var surveyTaskName = CultureInfo.InstalledUICulture.IetfLanguageTag != "ja-JP" ? askedForSurveyTaskName : askedForJapaneseSurveyTaskName;
-            //bool surveyAsked = HasDoneTask(surveyTaskName);
 
             await Dispatcher.InvokeTask(async () =>
             {
@@ -495,33 +502,28 @@ namespace Stride.LauncherApp.ViewModels
                     {
                         var versionToInstall = StrideVersions.First(x => x.CanBeDownloaded);
                         await versionToInstall.Download(true);
-                    }
-                    if (!VsixPackage.IsLatestVersionInstalled && VisualStudioVersions.AvailableVisualStudioInstances.Any())
-                    {
-                        result = await ServiceProvider.Get<IDialogService>().MessageBox(Strings.AskInstallVSIX, MessageBoxButton.YesNo, MessageBoxImage.Question);
-                        if (result == MessageBoxResult.Yes)
+
+                        // if VS2022 is installed (version 17.x)
+                        if (!VsixPackage2022.IsLatestVersionInstalled && VsixPackage2022.CanBeDownloaded && VisualStudioVersions.AvailableVisualStudioInstances.Any(ide => ide.InstallationVersion.Major == 17))
                         {
-                            await VsixPackage.ExecuteAction();
+                            result = await ServiceProvider.Get<IDialogService>().MessageBox(string.Format(Strings.AskInstallVSIX, "2022"), MessageBoxButton.YesNo, MessageBoxImage.Question);
+                            if (result == MessageBoxResult.Yes)
+                            {
+                                await VsixPackage2022.ExecuteAction();
+                            }
+                        }
+
+                        // if VS2019 is installed (version 16.x)
+                        if (!VsixPackage2019.IsLatestVersionInstalled && VsixPackage2019.CanBeDownloaded && VisualStudioVersions.AvailableVisualStudioInstances.Any(ide => ide.InstallationVersion.Major == 16))
+                        {
+                            result = await ServiceProvider.Get<IDialogService>().MessageBox(string.Format(Strings.AskInstallVSIX, "2019"), MessageBoxButton.YesNo, MessageBoxImage.Question);
+                            if (result == MessageBoxResult.Yes)
+                            {
+                                await VsixPackage2019.ExecuteAction();
+                            }
                         }
                     }
                 }
-                // Disable dialog for the survey
-                //else if (!surveyAsked)
-                //{
-                //    var result = ShowMessage(ServiceProvider, Strings.AskSurvey, MessageBoxButton.YesNo, MessageBoxImage.Question);
-                //    if (result == MessageBoxResult.Yes)
-                //    {
-                //        try
-                //        {
-                //            Process.Start(Urls.Survey1);
-                //        }
-                //        catch
-                //        {
-                //            ShowMessage(ServiceProvider, Strings.ErrorOpeningBrowser, MessageBoxButton.OK, MessageBoxImage.Error);
-                //        }
-                //    }
-                //    SaveTaskAsDone(surveyTaskName);
-                //}
             });
         }
 

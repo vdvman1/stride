@@ -1,4 +1,4 @@
-﻿<Project>
+<Project>
   <PropertyGroup>
     <StrideRuntime>true</StrideRuntime>
     <StrideGraphicsApiDependent>true</StrideGraphicsApiDependent>
@@ -15,17 +15,11 @@
     <StrideCodeAnalysis>true</StrideCodeAnalysis>
   </PropertyGroup>
   <Choose>
-    <When Condition=" '$(StridePlatform)' == 'Android'">
+    <When Condition=" '$(TargetFramework)' == '$(StrideFrameworkAndroid)'">
       <ItemGroup>
-        <Reference Include="Mono.Android" />
         <Reference Include="GoogleVRJava">
           <HintPath>..\..\..\deps\GoogleVR\lib\Android\GoogleVRJava.dll</HintPath>
         </Reference>
-      </ItemGroup>
-    </When>
-    <When Condition=" '$(StridePlatform)' == 'iOS'">
-      <ItemGroup>
-        <Reference Include="Xamarin.iOS" />
       </ItemGroup>
     </When>
   </Choose>
@@ -33,6 +27,11 @@
     <When Condition=" '$(StrideGraphicsApi)' == 'Direct3D11' Or '$(StrideGraphicsApi)' == 'Direct3D12' ">
       <ItemGroup>
         <StrideNativeLib Include="..\..\..\deps\OpenVR\$(StridePlatformDeps)\**\openvr_api.*">
+          <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
+          <RelativePath>%(RecursiveDir)%(Filename)%(Extension)</RelativePath>
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </StrideNativeLib>
+        <StrideNativeLib Include="..\..\..\deps\OpenXR\openxr_loader.dll">
           <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
           <RelativePath>%(RecursiveDir)%(Filename)%(Extension)</RelativePath>
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -54,7 +53,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <StrideContent Condition="'$(StridePlatform)' == 'Linux'" Include="Stride.VirtualReality.dll.config" />
     <None Include="Stride.Native.Libs.targets">
       <SubType>Designer</SubType>
     </None>
@@ -64,6 +62,9 @@
     <None Include="OculusOVR\OculusOVR.cpp" />
     <None Include="Fove\Fove.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Silk.NET.OpenXR" Version="2.10.1" />
+  </ItemGroup>
   <Import Project="$(StrideSdkTargets)" />
 
   <PropertyGroup>
@@ -72,7 +73,7 @@
   </PropertyGroup>
   <Target Name="_StrideIncludeExtraAssemblies">
     <ItemGroup>
-      <BuildOutputInPackage Include="$(OutputPath)GoogleVRJava.dll" Condition=" '$(StridePlatform)' == 'Android' " />
+      <BuildOutputInPackage Include="$(OutputPath)GoogleVRJava.dll" Condition=" '$(TargetFramework)' == '$(StrideFrameworkAndroid)' " />
     </ItemGroup>
   </Target>
 </Project>

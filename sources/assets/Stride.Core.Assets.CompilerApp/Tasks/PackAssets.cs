@@ -13,6 +13,7 @@ using Stride.Core.Diagnostics;
 using Stride.Core.IO;
 using Stride.Core.Yaml;
 using Stride.Core.Yaml.Events;
+using Task = Microsoft.Build.Utilities.Task;
 
 namespace Stride.Core.Assets.CompilerApp.Tasks
 {
@@ -171,7 +172,7 @@ namespace Stride.Core.Assets.CompilerApp.Tasks
                             RegisterItem(outputFile);
                         }
                     }
-                    catch (YamlException e)
+                    catch (YamlException)
                     {
                         // Not a Yaml asset? Process it as binary (copy)
                         File.Copy(asset.FilePath, outputFile, true);

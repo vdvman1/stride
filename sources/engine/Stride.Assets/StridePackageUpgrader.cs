@@ -148,6 +148,20 @@ namespace Stride.Assets
 
                     var packageReferences = project.GetItems("PackageReference").ToList();
 
+                    // Remove Stride reference for older executable projects (it was necessary in the past due to runtime.json)
+                    if (dependency.Version.MinVersion < new PackageVersion("4.1.0.0")
+                        && solutionProject.Type == ProjectType.Executable
+                        && (solutionProject.Platform == PlatformType.macOS || solutionProject.Platform == PlatformType.Linux))
+                    {
+                        var strideReference = packageReferences.FirstOrDefault(x => x.EvaluatedInclude == "Stride");
+                        if (strideReference != null)
+                        {
+                            packageReferences.Remove(strideReference);
+                            project.RemoveItem(strideReference);
+                            isProjectDirty = true;
+                        }
+                    }
+
                     foreach (var packageReference in packageReferences)
                     {
                         if (packageReference.EvaluatedInclude.StartsWith("Stride.") && packageReference.GetMetadataValue("Version") != CurrentVersion)
@@ -206,16 +220,23 @@ namespace Stride.Assets
                     if (dependency.Version.MinVersion < new PackageVersion("4.1.0.0") && solutionProject != null)
                     {
                         var tfm = project.GetProperty("TargetFramework");
-                        if (tfm != null && tfm.EvaluatedValue == "netstandard2.0")
+                        if (tfm != null)
                         {
-                            tfm.Xml.Name = "TargetFrameworks";
-                            tfm.Xml.Value = "net5.0";
-                            isProjectDirty = true;
-                        }
-                        if (tfm != null && tfm.EvaluatedValue.StartsWith("net4") && solutionProject.Type == ProjectType.Executable)
-                        {
-                            tfm.Xml.Value = "net5.0-windows";
-                            isProjectDirty = true;
+                            // Library
+                            if (tfm.EvaluatedValue == "netstandard2.0"
+                                || (tfm.EvaluatedValue.StartsWith("net4") && solutionProject.Type == ProjectType.Library))
+                            {
+                                // In case it's a single TargetFramework, add the "s" at the end
+                                tfm.Xml.Name = "TargetFrameworks";
+                                tfm.Xml.Value = "net6.0";
+                                isProjectDirty = true;
+                            }
+                            // Executable
+                            else if ((tfm.EvaluatedValue.StartsWith("net4") || tfm.EvaluatedValue.StartsWith("net5")) && solutionProject.Type == ProjectType.Executable)
+                            {
+                                tfm.Xml.Value = solutionProject.Platform == PlatformType.Windows ? "net6.0-windows" : "net6.0";
+                                isProjectDirty = true;
+                            }
                         }
                     }
 
